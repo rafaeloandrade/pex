@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PEX Jornalismo — Cronograma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:ital,wght@0,300;0,400;0,600;0,800;1,300;1,400&family=Fira+Sans+Extra+Condensed:ital,wght@0,300;0,400;0,600;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --blue:#29a9da;
+    --orange:#f15a24;
+    --green:#28b779;
+    --gray:#e5e5e5;
+    --card:#d6d6d6;
+    --ink:#090909;
+    --stage-w:1920;
+    --stage-h:808;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#f3f3f3;color:var(--ink);font-family:"Fira Sans Condensed",Arial,sans-serif}
+  body{min-height:100vh}
+  .toolbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:10px 14px; background:rgba(24,24,24,.96); color:white;
+    box-shadow:0 3px 14px rgba(0,0,0,.14)
+  }
+  .toolbar .spacer{flex:1}
+  .toolbar button,.toolbar label{
+    border:1px solid rgba(255,255,255,.20);background:#2d2d2d;color:#fff;
+    border-radius:7px;min-width:38px;height:36px;padding:0 10px;font:600 13px/1 "Fira Sans Condensed",sans-serif;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  }
+  .toolbar button:hover,.toolbar label:hover{background:#3b3b3b}
+  .toolbar button svg,.toolbar label svg{width:18px;height:18px;display:block}
+  .toolbar input{display:none}
+  .admin-only{display:none!important}
+  body.authenticated .admin-only{display:inline-flex!important}
+  .status{display:none;font-size:12px;color:#cfcfcf;max-width:520px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.authenticated .status{display:block}
+  .icon-label{display:none}
+  @media(min-width:900px){.icon-label{display:inline}}
+
+  .login-backdrop{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.54);display:none;align-items:center;justify-content:center;padding:20px}
+  .login-backdrop.open{display:flex}
+  .login-card{width:min(360px,100%);background:#fff;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.30);padding:24px;color:#111}
+  .login-card h2{margin:0 0 6px;font:800 25px/1 "Fira Sans Extra Condensed",sans-serif;text-transform:uppercase}
+  .login-card p{margin:0 0 18px;color:#666;font-size:13px}
+  .login-card label{display:block;font-weight:600;font-size:13px;margin:11px 0 5px}
+  .login-card input{width:100%;height:40px;border:1px solid #bdbdbd;border-radius:6px;padding:0 10px;font:400 15px "Fira Sans Condensed",sans-serif;outline:none}
+  .login-card input:focus{border-color:#555}
+  .login-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  .login-actions button{border:0;border-radius:6px;padding:9px 14px;font:700 13px "Fira Sans Condensed",sans-serif;cursor:pointer}
+  .login-cancel{background:#e7e7e7;color:#222}
+  .login-submit{background:#1e1e1e;color:#fff}
+  .login-error{min-height:18px;margin-top:10px;color:#b71c1c;font-size:12px}
+  .viewport{position:relative;overflow:auto;background:#fff;min-height:calc(100vh - 54px)}
+  .scale-shell{position:relative;margin:0 auto;transform-origin:top left}
+  .stage{
+    position:absolute;left:0;top:0;width:1920px;height:808px;overflow:hidden;background:#fff;
+    transform-origin:top left; user-select:none;
+  }
+  .logo{
+    position:absolute;left:20px;top:20px;width:580px;height:185px;background:#ccc;
+    display:flex;align-items:center;padding:20px 18px 12px 20px;color:#fff;overflow:hidden
+  }
+  .logo .pex{font-family:"Fira Sans Extra Condensed",sans-serif;font-weight:900;font-size:112px;letter-spacing:-5px;line-height:.8}
+  .logo .jor{font-family:"Fira Sans Extra Condensed",sans-serif;font-weight:300;font-style:italic;font-size:100px;letter-spacing:-4px;line-height:.8;margin-left:2px}
+  svg.routes{position:absolute;inset:0;width:1920px;height:808px;overflow:visible}
+  .route{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:10}
+  .week-col{position:absolute;text-align:center}
+  .week-date{height:30px;font:400 italic 15px/1.05 "Fira Sans Extra Condensed",sans-serif;white-space:nowrap}
+  .week-num{font:900 25px/1 "Fira Sans Extra Condensed",sans-serif;margin-top:2px}
+  .week-bg{position:absolute;background:var(--gray)}
+  .weeks-label{position:absolute;left:195px;top:385px;background:#dedede;padding:4px 9px;font:400 italic 18px/1 "Fira Sans Extra Condensed",sans-serif}
+  .protocol{
+    position:absolute;background:#ddd;padding:5px 7px;font:500 italic 15px/1 "Fira Sans Extra Condensed",sans-serif;
+  }
+  .protocol:after{
+    content:"";position:absolute;left:50%;transform:translateX(-50%);top:100%;
+    border-left:10px solid transparent;border-right:10px solid transparent;border-top:18px solid #ddd;
+  }
+  .discipline{position:absolute;left:15px;width:130px;height:82px;border-radius:3px;color:white;display:flex;align-items:center;padding:8px 7px;font:800 21.5px/1.02 "Fira Sans Extra Condensed",sans-serif;text-transform:uppercase;letter-spacing:-.25px}
+  .meta{position:absolute;left:152px;width:104px;height:72px;text-align:center;background:#e3e3e3;padding:6px 3px 4px;font-family:"Fira Sans Extra Condensed",sans-serif}
+  .meta .day{font-style:italic;font-size:16px;line-height:1}
+  .meta .time{font-style:italic;font-weight:600;font-size:17px;line-height:1.05;margin-top:3px}
+  .meta .prof{font-weight:600;font-size:12px;line-height:1.05;margin-top:5px;white-space:pre-line}
+  .card-wrap{position:absolute;width:70px;height:75px;background:rgba(229,229,229,.92);display:flex;align-items:center;justify-content:center}
+  .schedule-card{width:60px;min-height:62px;border:1.7px solid #171717;border-radius:12px;background:#d8d8d8;text-align:center;overflow:hidden}
+  .schedule-line{font-family:"Fira Sans Extra Condensed",sans-serif;line-height:1;white-space:nowrap;min-height:14.5px;padding:1.7px 3px 1.2px;display:flex;align-items:center;justify-content:center}
+  .schedule-line:nth-child(even){background:#c3c3c3}
+  .schedule-line .t{font-size:11px;font-style:italic;color:#555}
+  .schedule-line .n{font-size:16px;font-weight:800;margin-left:2px;color:#111}
+  .text-card{width:60px;min-height:62px;border:1.5px solid #111;border-radius:11px;background:#d4d4d4;padding:6px 3px;display:flex;align-items:center;justify-content:center;text-align:center;font:700 13px/1.05 "Fira Sans Extra Condensed",sans-serif;white-space:pre-line}
+  .special-card{position:absolute;background:#fff;border:4px solid #111;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-family:"Fira Sans Extra Condensed",sans-serif;z-index:4}
+  .special-title{font-weight:900;font-size:34px;line-height:1.03;white-space:pre-line}
+  .special-date{font-style:italic;font-size:16px;margin-top:5px;white-space:pre-line}
+  .post-note{position:absolute;width:76px;text-align:center;font:800 15px/1.08 "Fira Sans Extra Condensed",sans-serif;white-space:pre-line;padding:0 3px}
+  .post-note em{font-weight:400;font-size:13px}
+
+  /* Indicador discreto da semana atual, calculado pelo calendário local do dispositivo */
+  .current-week-marker{
+    position:absolute;z-index:12;height:18px;min-width:38px;padding:0 7px;border-radius:9px;
+    background:rgba(20,20,20,.78);color:#fff;display:flex;align-items:center;justify-content:center;
+    font:700 9.5px/1 "Fira Sans Condensed",sans-serif;letter-spacing:.7px;text-transform:uppercase;
+    white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.12);pointer-events:none
+  }
+  .current-week-marker:after{
+    content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);
+    border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid rgba(20,20,20,.78)
+  }
+  .week-col.is-current .week-num{position:relative}
+  .week-col.is-current .week-num:after{
+    content:"";position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
+    width:18px;height:2px;border-radius:2px;background:rgba(20,20,20,.58)
+  }
+  .hint{display:none;position:fixed;right:18px;bottom:18px;z-index:80;background:#111;color:#fff;padding:10px 12px;border-radius:7px;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.22)}
+  body.presentation .toolbar{display:none}
+  body.presentation .viewport{min-height:100vh}
+  .presentation-close{
+    position:fixed;right:16px;top:16px;z-index:110;width:42px;height:42px;border:1px solid rgba(255,255,255,.35);
+    border-radius:50%;background:rgba(20,20,20,.78);color:#fff;display:none;align-items:center;justify-content:center;cursor:pointer;
+    box-shadow:0 3px 14px rgba(0,0,0,.2);backdrop-filter:blur(3px)
+  }
+  .presentation-close svg{width:22px;height:22px}
+  .presentation-close:hover{background:rgba(20,20,20,.94)}
+  body.presentation .presentation-close{display:flex}
+  body.exporting .presentation-close{display:none!important}
+  @media(max-width:760px){.toolbar .status{display:none}}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button id="uploadBtn" title="Carregar Excel" aria-label="Carregar Excel">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 16V7.83L8.41 10.4 7 9l5-5 5 5-1.41 1.4L13 7.83V16h-2Zm-5 4a2 2 0 0 1-2-2v-3h2v3h12v-3h2v3a2 2 0 0 1-2 2H6Z"/></svg>
+    <span class="icon-label">Carregar Excel</span>
+  </button>
+  <input id="xlsxInput" type="file" accept=".xlsx,.xls" />
+  <button id="resetBtn" class="admin-only" title="Recarregar dados publicados" aria-label="Recarregar dados publicados">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9H7.4A5 5 0 1 0 8 9.4V12H6V6h6v2H9.5A6.96 6.96 0 0 1 12 5Z"/></svg>
+    <span class="icon-label">Recarregar publicado</span>
+  </button>
+  <button id="fitBtn" title="Ajustar à tela">Ajustar à tela</button>
+  <button id="zoomBtn" title="Alternar zoom">100%</button>
+  <button id="presentBtn" title="Modo apresentação">Modo apresentação</button>
+  <button id="downloadBtn" title="Baixar PDF" aria-label="Baixar PDF">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 4h2v8.17l2.59-2.58L17 11l-5 5-5-5 1.41-1.41L11 12.17V4ZM5 18h14v2H5v-2Z"/></svg>
+    <span class="icon-label">Baixar PDF</span>
+  </button>
+  <div class="spacer"></div>
+  <div class="status" id="status">Fonte publicada</div>
+  <button id="authBtn" title="Acesso administrativo" aria-label="Acesso administrativo">
+    <svg id="authIcon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Zm7 13H7v-9h10v9Z"/></svg>
+  </button>
+</div>
+<div class="login-backdrop" id="loginBackdrop" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <form class="login-card" id="loginForm">
+    <h2 id="loginTitle">Acesso administrativo</h2>
+    <p>Entre para publicar uma nova planilha do cronograma.</p>
+    <label for="loginUser">Usuário</label>
+    <input id="loginUser" name="user" autocomplete="username" required>
+    <label for="loginPass">Senha</label>
+    <input id="loginPass" name="password" type="password" autocomplete="current-password" required>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-actions">
+      <button type="button" class="login-cancel" id="loginCancel">Cancelar</button>
+      <button type="submit" class="login-submit">Entrar</button>
+    </div>
+  </form>
+</div>
+<button class="presentation-close" id="presentationClose" title="Fechar apresentação" aria-label="Fechar apresentação">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z"/></svg>
+</button>
+<div class="viewport" id="viewport">
+  <div class="scale-shell" id="shell"><div class="stage" id="stage"></div></div>
+</div>
+<div class="hint" id="hint"></div>
+<script src="./config.js"></script>
+<script>
+const CONFIG = Object.assign({
+  apiBase:'',
+  dataUrl:'',
+  fallbackDataUrl:'./dados.xlsx'
+}, window.PEX_CONFIG || {});
+let pendingUploadAfterLogin = false;
+
+function apiUrl(path){
+  const base=String(CONFIG.apiBase||'').replace(/\/$/,'');
+  return `${base}${path}`;
+}
+function publishedDataUrl(){ return CONFIG.dataUrl || apiUrl('/api/data'); }
+function authToken(){ return sessionStorage.getItem('pexAdminToken') || ''; }
+function isAuthenticated(){ return Boolean(authToken()); }
+function syncAuthUI(){
+  document.body.classList.toggle('authenticated', isAuthenticated());
+  const icon=document.getElementById('authIcon');
+  if(icon){
+    icon.innerHTML = isAuthenticated()
+      ? '<path fill="currentColor" d="M10 17v-2h7V9h-7V7h7a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-7Zm2-3-1.4 1.4L7.2 12l3.4-3.4L12 10l-1 1H3v2h8l1 1Z"/>'
+      : '<path fill="currentColor" d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Zm7 13H7v-9h10v9Z"/>';
+  }
+}
+function openLogin(forUpload=false){
+  pendingUploadAfterLogin = forUpload;
+  document.getElementById('loginError').textContent='';
+  document.getElementById('loginBackdrop').classList.add('open');
+  setTimeout(()=>document.getElementById('loginUser').focus(),0);
+}
+function closeLogin(){ document.getElementById('loginBackdrop').classList.remove('open'); }
+
+async function serverLogin(username,password){
+  const r=await fetch(apiUrl('/api/login'),{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username,password})
+  });
+  let data={};
+  try{data=await r.json();}catch{}
+  if(!r.ok) throw new Error(data.error || 'Não foi possível autenticar.');
+  if(!data.token) throw new Error('O servidor não retornou uma sessão válida.');
+  return data.token;
+}
+
+document.getElementById('loginForm').addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  const user=document.getElementById('loginUser').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const submit=e.submitter;
+  const old=submit?.textContent;
+  if(submit){submit.disabled=true;submit.textContent='Entrando…';}
+  document.getElementById('loginError').textContent='';
+  try{
+    const token=await serverLogin(user,pass);
+    sessionStorage.setItem('pexAdminToken',token);
+    document.getElementById('loginPass').value='';
+    closeLogin(); syncAuthUI();
+    if(pendingUploadAfterLogin){pendingUploadAfterLogin=false;document.getElementById('xlsxInput').click();}
+  }catch(err){
+    console.error(err);
+    const localFile = location.protocol === 'file:';
+    document.getElementById('loginError').textContent = localFile
+      ? 'O login permanente precisa do backend publicado. Abra a versão online.'
+      : (err.message || 'Usuário ou senha incorretos.');
+  }finally{
+    if(submit){submit.disabled=false;submit.textContent=old||'Entrar';}
+  }
+});
+document.getElementById('loginCancel').addEventListener('click',()=>{pendingUploadAfterLogin=false;closeLogin();});
+document.getElementById('loginBackdrop').addEventListener('click',(e)=>{if(e.target.id==='loginBackdrop'){pendingUploadAfterLogin=false;closeLogin();}});
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape'){closeLogin();if(document.body.classList.contains('presentation'))setPresentation(false);}});
+document.getElementById('authBtn').addEventListener('click',()=>{
+  if(isAuthenticated()){sessionStorage.removeItem('pexAdminToken');syncAuthUI();showHint('Sessão administrativa encerrada');}
+  else openLogin(false);
+});
+document.getElementById('uploadBtn').addEventListener('click',()=>{
+  if(isAuthenticated()) document.getElementById('xlsxInput').click();
+  else openLogin(true);
+});
+syncAuthUI();
+
+const INITIAL = [["ESTAÇÃO", "DIA/HORÁRIO", "SALA", "PROFESSOR", "AGOSTO", null, null, null, "SETEMBRO", null, null, null, "OUTUBRO", null, null, null, null, "NOVEMBRO", null, null, null, "DEZEMBRO"], [null, null, null, null, "SEMANA 2", "SEMANA 3", "SEMANA 4", "SEMANA 5\nPROTOCOLO", "SEMANA 6\n(PROTOCOLO)", "SEMANA 7", "SEMANA 8", "SEMANA 9", "SEMANA 10", "SEMANA 11", "SEMANA 12", "SEMANA 13", "SEMANA 14", "IGNORA ESTA COLUNA", "SEMANA 15", "SEMANA 16", "SEMANA 17", "SEMANA 18"], [null, null, null, null, "12/08 (QUA)\n13/08 (QUI)", "19/08 (QUA)\n20/08 (QUI)", "26/08 (QUA)\n27/08 (QUI)", "02/09 (QUA)\n03/09 (QUI)", "07/09 (SEG) A\n11/09 (SEXT)", "16/09 (QUA)\n17/09 (QUI)", "23/09 (QUA)\n24/09 (QUI)", "30/09 (QUA)\n01/10 (QUI)", "07/10 (QUA)\n08/10 (QUI)", "14/10 (QUA)\n15/10 (QUI)", "21/10 (QUA)\n22/10 (QUI)", "28/10 (QUA)\n29/10 (QUI)", "04/11 (QUA)\n05/11 (QUI)", "04/11 (QUA)\n05/11 (QUI)", "09/11\nA 13/11", "16/11\nA 19/11", "23/11\nA 27/11", "30/11\nA 04/12"], ["AULA DA DISCIPLINA", "QUARTA\n7h50-9h20", "A 19\n(AMARELO)", "RENAN", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], ["PRODUÇÃO\nJORNALÍSTICA", "QUARTA\n9h40-11h10", "A 19\n(AMARELO)", "GABRIEL\nE LENISE", "ACOLHIDA\nCULTURAL", "09h50: 6\n10h10: 7\n10h30: 5", "09h50: 3\n10h10: 4\n10h30: 1\n10h50: 2", "SEMANA\nACADÊMICA", "09h50: 6\n10h10: 7\n10h30: 5", "PITCH", "09h50: 2\n10h10: 3\n10h30: 4\n10h50: 1", "09h50: 6\n10h10: 7\n10h30: 5", "09h50: 1\n10h10: 2\n10h30: 3\n10h50: 4", "09h50: 6\n10h10: 7\n10h30: 5", "09h50: 4\n10h10: 1\n10h30: 2\n10h50: 3", "09h50: 6\n10h10: 7\n10h30: 5", "09h50: 3\n10h10: 4\n10h30: 1\n10h50: 2", "09h50: 6\n10h10: 7\n10h30: 5", "BANCA\nFINAL", "SUPERVISÃO\nAGENDADA\nPARA NÃO\nAPROVADOS", "SUPERVISÃO\nAGENDADA\nPARA NÃO\nAPROVADOS", "REBANCA\n(TRABALHOS COM\nNOTA INFERIOR A 7,0)"], ["PLANEJAMENTO\nDE PRODUTO", "QUINTA\n9h40-11h10", "A 19\n(AMARELO)", "NILTON\nE RODOLFO", "09h50: 1\n10h10: 2\n10h30: 3\n10h50: 4", "09h50: 7\n10h10: 5\n10h30: 6", "09h50: 4\n10h10: 1\n10h30: 2\n10h50: 3", null, "09h50: 7\n10h10: 5\n10h30: 6", null, "09h50: 3\n10h10: 4\n10h30: 1\n10h50: 2", "09h50: 7\n10h10: 5\n10h30: 6", "09h50: 2\n10h10: 3\n10h30: 4\n10h50: 1", "09h50: 7\n10h10: 5\n10h30: 6", "09h50: 1\n10h10: 2\n10h30: 3\n10h50: 4", "09h50: 7\n10h10: 5\n10h30: 6", "09h50: 4\n10h10: 1\n10h30: 2\n10h50: 3", "09h50: 7\n10h10: 5\n10h30: 6", null, null, null, null], ["MODELO\nDE NEGÓCIO", "QUINTA\n11h10-12h40", "A 19\n(AMARELO)", "DANIEL\nE KARLAN", "11h20: 5\n11h40: 6\n12h00: 7", "11h20: 2\n11h40: 3\n12h00: 4\n12h20: 1", "11h20: 5\n11h40: 6\n12h00: 7", null, "11h20: 1\n11h40: 2\n12h00: 3\n12h20: 4", null, "11h20: 5\n11h40: 6\n12h00: 7", "11h20: 4\n11h40: 1\n12h00: 2\n12h20: 3", "11h20: 5\n11h40: 6\n12h00: 7", "11h20: 3\n11h40: 4\n12h00: 2\n12h20: 1", "11h20: 5\n11h40: 6\n12h00: 7", "11h20: 2\n11h40: 3\n12h00: 4\n12h20: 1", "11h20: 5\n11h40: 6\n12h00: 7", "11h20: 1\n11h40: 2\n12h00: 3\n12h20: 4", null, null, null, null]];
+const C = {blue:'#29a9da',orange:'#f15a24',green:'#28b779'};
+const stage = document.getElementById('stage');
+const shell = document.getElementById('shell');
+const viewport = document.getElementById('viewport');
+const statusEl = document.getElementById('status');
+const hintEl = document.getElementById('hint');
+let currentRows = INITIAL;
+let scale = 1;
+let scheduleYear = 2026;
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function showHint(msg){hintEl.textContent=msg;hintEl.style.display='block';clearTimeout(showHint.t);showHint.t=setTimeout(()=>hintEl.style.display='none',2600)}
+function getWeekColumns(rows){
+  const out={};
+  const hdr=rows[1]||[];
+  hdr.forEach((v,i)=>{
+    const s=String(v||'').trim();
+    const m=s.match(/SEMANA\s+(\d+)/i);
+    if(m && !/IGNORA/i.test(s)) out[+m[1]]=i;
+  });
+  return out;
+}
+function cleanDate(raw){
+  if(!raw) return '';
+  let s=String(raw).toUpperCase().replace(/\([^)]*\)/g,'').replace(/\s+A\s*$/gm,'').replace(/\s+/g,' ').trim();
+  // explicit range like 09/11 A 13/11
+  let r=s.match(/(\d{2})\/(\d{2})\s+A\s+(\d{2})\/(\d{2})/i);
+  if(r) return r[2]===r[4] ? `${r[1]} a ${r[3]}/${r[2]}` : `${r[1]}/${r[2]} a ${r[3]}/${r[4]}`;
+  const dates=[...s.matchAll(/(\d{2})\/(\d{2})/g)].map(m=>({d:m[1],m:m[2]}));
+  if(dates.length>=2){
+    const a=dates[0],b=dates[1];
+    return a.m===b.m ? `${a.d}-${b.d}/${a.m}` : `${a.d}/${a.m} - ${b.d}/${b.m}`;
+  }
+  if(dates.length===1) return `${dates[0].d}/${dates[0].m}`;
+  return s;
+}
+function metaFrom(row){
+  const raw=String(row[1]||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  return {day:raw[0]||'',time:raw[1]||'',prof:String(row[3]||'').replace(/\nE\n/g,' - ').replace(/\n/g,' ')};
+}
+function scheduleHTML(v){
+  if(v==null || String(v).trim()==='') return '';
+  const s=String(v).trim();
+  const lines=s.split(/\n+/).filter(Boolean);
+  const parsed=lines.map(line=>line.match(/^\s*([0-9]{1,2}h[0-9]{2})\s*:\s*(.+)\s*$/i));
+  if(parsed.every(Boolean)){
+    return `<div class="schedule-card">${parsed.map(m=>`<div class="schedule-line"><span class="t">${esc(m[1])}:</span><span class="n">${esc(m[2])}</span></div>`).join('')}</div>`;
+  }
+  return `<div class="text-card">${esc(s)}</div>`;
+}
+function addAbs(html,left,top,w,h,cls=''){
+  const d=document.createElement('div');d.className=cls;d.style.left=left+'px';d.style.top=top+'px';if(w)d.style.width=w+'px';if(h)d.style.height=h+'px';d.innerHTML=html;stage.appendChild(d);return d;
+}
+function weekHeader(week,x,date,y=253,w=70){
+  const d=addAbs(`<div class="week-date">${esc(date)}</div><div class="week-num">${week}</div>`,x,y,w,52,'week-col');
+  d.dataset.week=String(week);
+  return d;
+}
+
+function datesFromCell(raw,year=scheduleYear){
+  const txt=String(raw||'');
+  const matches=[...txt.matchAll(/(\d{1,2})\/(\d{1,2})/g)];
+  return matches.map(m=>{
+    const d=+m[1], mo=+m[2];
+    const dt=new Date(year,mo-1,d,12,0,0,0);
+    return Number.isNaN(dt.getTime())?null:dt;
+  }).filter(Boolean);
+}
+function mondayOf(date){
+  const d=new Date(date); d.setHours(0,0,0,0);
+  const dow=d.getDay(); const delta=(dow+6)%7;
+  d.setDate(d.getDate()-delta); return d;
+}
+function sundayOf(date){
+  const d=mondayOf(date); d.setDate(d.getDate()+6); d.setHours(23,59,59,999); return d;
+}
+function currentScheduleWeek(rows,now=new Date()){
+  if(now.getFullYear()!==scheduleYear) return null;
+  const wc=getWeekColumns(rows);
+  for(const week of Object.keys(wc).map(Number).sort((a,b)=>a-b)){
+    const dates=datesFromCell(rows[2]?.[wc[week]]);
+    if(!dates.length) continue;
+    const minDate=new Date(Math.min(...dates.map(d=>d.getTime())));
+    const maxDate=new Date(Math.max(...dates.map(d=>d.getTime())));
+    const start=mondayOf(minDate), end=sundayOf(maxDate);
+    if(now>=start && now<=end) return week;
+  }
+  return null;
+}
+function refreshCurrentWeekMarker(){
+  stage.querySelectorAll('.current-week-marker').forEach(el=>el.remove());
+  stage.querySelectorAll('.week-col.is-current').forEach(el=>el.classList.remove('is-current'));
+  const week=currentScheduleWeek(currentRows,new Date());
+  if(week==null) return;
+  const header=stage.querySelector(`.week-col[data-week="${week}"]`);
+  if(!header) return;
+  header.classList.add('is-current');
+  const left=parseFloat(header.style.left)||0;
+  const top=parseFloat(header.style.top)||0;
+  const width=parseFloat(header.style.width)||70;
+  const markerW=124;
+  const marker=addAbs('VOCÊ ESTÁ AQUI',left+(width-markerW)/2,top-23,markerW,18,'current-week-marker');
+  marker.title='Semana atual calculada pelo calendário deste dispositivo';
+}
+function cardAt(value,x,y){
+  const d=addAbs(scheduleHTML(value),x,y,70,75,'card-wrap');
+  if(!value) d.style.visibility='hidden';
+}
+function specialCard(title,date,x,y,w=124,h=198){
+  addAbs(`<div class="special-title">${esc(title)}</div><div class="special-date">${esc(date)}</div>`,x,y,w,h,'special-card');
+}
+
+function specialWeek(rows,pattern,rowIndex=4){
+  const wc=getWeekColumns(rows);
+  for(const [week,col] of Object.entries(wc)){
+    if(pattern.test(String(rows[rowIndex]?.[col]||''))) return +week;
+  }
+  return null;
+}
+function protocolWeeks(rows){
+  const wc=getWeekColumns(rows);
+  return Object.entries(wc)
+    .filter(([week,col])=>/PROTOCOLO/i.test(String(rows[1]?.[col]||'')))
+    .map(([week])=>+week)
+    .sort((a,b)=>a-b);
+}
+function render(rows){
+  currentRows=rows;
+  stage.innerHTML='';
+  const wc=getWeekColumns(rows);
+  const prod=rows[4]||[], plan=rows[5]||[], bus=rows[6]||[];
+  const meta=[metaFrom(prod),metaFrom(plan),metaFrom(bus)];
+
+  const allWeeks=Object.keys(wc).map(Number).sort((a,b)=>a-b);
+  const pitchWeek=specialWeek(rows,/PITCH/i,4) ?? 6;
+  const bancaWeek=specialWeek(rows,/BANCA/i,4) ?? 15;
+  const preWeeks=allWeeks.filter(w=>w<pitchWeek);
+  const midWeeks=allWeeks.filter(w=>w>pitchWeek && w<bancaWeek);
+  const postWeeks=allWeeks.filter(w=>w>bancaWeek);
+
+  const preStart=268, preGap=85;
+  const preX={};
+  preWeeks.forEach((w,i)=>preX[w]=preStart+i*preGap);
+
+  const pitchX=preStart+preWeeks.length*preGap+12;
+  const midStart=pitchX+178;
+  const midGap=80;
+  const bancaX=1510;
+
+  stage.insertAdjacentHTML('beforeend',`<div class="logo"><span class="pex">PEX</span><span class="jor">jornalismo</span></div>`);
+  stage.insertAdjacentHTML('beforeend',`
+  <svg class="routes" viewBox="0 0 1920 808" aria-hidden="true">
+    <path class="route" stroke="${C.blue}" d="M245 466 H${pitchX-30} Q${pitchX-10} 466 ${pitchX+5} 485 H${pitchX+100} Q${pitchX+122} 485 ${pitchX+132} 456 L${midStart} 323 H1445 Q1460 323 1472 345 L1510 430" />
+    <path class="route" stroke="${C.orange}" d="M245 566 H1510" />
+    <path class="route" stroke="${C.green}" d="M245 666 H${pitchX-30} Q${pitchX-10} 666 ${pitchX+5} 647 H${pitchX+100} C${pitchX+124} 647 ${pitchX+142} 728 ${midStart} 728 H1440 Q1458 728 1468 707 L1512 619" />
+  </svg>`);
+
+  addAbs('semanas',195,385,75,25,'weeks-label');
+
+  const labels=[['PRODUÇÃO<br>JORNALÍSTICA',C.blue],['PLANEJAMENTO<br>DE PRODUTO',C.orange],['MODELO<br>DE NEGÓCIO',C.green]];
+  const ys=[425,525,625];
+  labels.forEach((l,i)=>{const d=addAbs(l[0],15,ys[i],130,82,'discipline');d.style.background=l[1];
+    const m=meta[i]; addAbs(`<div class="day">${esc(m.day)}</div><div class="time">${esc(m.time)}</div><div class="prof">${esc(m.prof)}</div>`,152,ys[i]+5,104,72,'meta');
+  });
+
+  preWeeks.forEach(w=>{
+    const col=wc[w]; if(col==null)return;
+    const x=preX[w];
+    weekHeader(w,x,cleanDate(rows[2]?.[col]),356,70);
+    addAbs('',x,420,70,285,'week-bg');
+    cardAt(prod[col],x,431); cardAt(plan[col],x,531); cardAt(bus[col],x,631);
+  });
+
+  const pWeeks=protocolWeeks(rows).filter(w=>preX[w]!=null);
+  if(pWeeks.length){
+    if(pWeeks.length===1){
+      addAbs('PROTOCOLO',preX[pWeeks[0]]-22,312,82,26,'protocol');
+    }else{
+      const minX=Math.min(...pWeeks.map(w=>preX[w]));
+      const maxX=Math.max(...pWeeks.map(w=>preX[w]));
+      const center=(minX+maxX+70)/2;
+      addAbs('PROTOCOLO',center-41,312,82,26,'protocol');
+    }
+  }
+
+  if(wc[pitchWeek]!=null){
+    weekHeader(pitchWeek,pitchX,cleanDate(rows[2]?.[wc[pitchWeek]]),356,88);
+    addAbs('',pitchX,420,88,285,'week-bg');
+    specialCard(String(prod[wc[pitchWeek]]||'PITCH').replace(/\n/g,' '),cleanDate(rows[2]?.[wc[pitchWeek]]),pitchX-22,443,128,190);
+  }
+
+  midWeeks.forEach((w,i)=>{
+    const col=wc[w]; if(col==null)return;
+    const x=midStart+i*midGap;
+    weekHeader(w,x,cleanDate(rows[2]?.[col]),246,70);
+    cardAt(prod[col],x,307);cardAt(plan[col],x,532);cardAt(bus[col],x,688);
+  });
+
+  if(wc[bancaWeek]!=null){
+    weekHeader(bancaWeek,bancaX,cleanDate(rows[2]?.[wc[bancaWeek]]),357,88);
+    addAbs('',bancaX,420,88,285,'week-bg');
+    const bancaTitle=String(prod[wc[bancaWeek]]||'BANCA FINAL').replace(/\n/g,'\n');
+    specialCard(bancaTitle,cleanDate(rows[2]?.[wc[bancaWeek]]),bancaX-24,443,128,190);
+  }
+
+  const postStart=1636, postGap=94;
+  postWeeks.forEach((w,i)=>{
+    const col=wc[w];if(col==null)return;const x=postStart+i*postGap;
+    weekHeader(w,x,cleanDate(rows[2]?.[col]),356,82);addAbs('',x,420,82,285,'week-bg');
+    const raw=String(prod[col]||'');
+    let main=raw, sub='';
+    const rb=raw.match(/REBANCA\s*\(([^)]*)\)/is);
+    if(rb){main='REBANCA';sub=rb[1];}
+    const html=`${esc(main.replace(/\n/g,'\n'))}${sub?`<br><br><em>${esc(sub)}</em>`:''}`;
+    addAbs(html,x+3,500,76,145,'post-note');
+  });
+  refreshCurrentWeekMarker();
+}
+function normalizeRows(rows){
+  const out=rows.slice(0,7).map(r=>Array.from({length:22},(_,i)=>r?.[i]??null));
+  while(out.length<7) out.push(Array(22).fill(null));
+  return out;
+}
+
+async function workbookRowsFromBuffer(buf,filename='dados.xlsx'){
+  if(typeof XLSX==='undefined') throw new Error('Leitor XLSX não carregou.');
+  const book=XLSX.read(buf,{type:'array'});
+  const sheetName=book.SheetNames.includes('ROTAÇÃO')?'ROTAÇÃO':book.SheetNames[0];
+  const rows=XLSX.utils.sheet_to_json(book.Sheets[sheetName],{header:1,defval:null,raw:false});
+  const norm=normalizeRows(rows);
+  if(!String(norm[1]?.join(' ')||'').match(/SEMANA\s+2/i)) throw new Error('estrutura não reconhecida');
+  const yearInName=String(filename).match(/(?:19|20)\d{2}/);
+  if(yearInName) scheduleYear=+yearInName[0];
+  return {rows:norm,sheetName};
+}
+async function fetchWorkbook(url){
+  const r=await fetch(`${url}${url.includes('?')?'&':'?'}v=${Date.now()}`,{cache:'no-store'});
+  if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  return await r.arrayBuffer();
+}
+async function loadPublishedData({quiet=false}={}){
+  const candidates=[];
+  const primary=publishedDataUrl();
+  if(primary) candidates.push({url:primary,label:'publicada'});
+  if(CONFIG.fallbackDataUrl && CONFIG.fallbackDataUrl!==primary) candidates.push({url:CONFIG.fallbackDataUrl,label:'arquivo do site'});
+  let lastErr;
+  for(const source of candidates){
+    try{
+      const buf=await fetchWorkbook(source.url);
+      const parsed=await workbookRowsFromBuffer(buf,'dados.xlsx');
+      render(parsed.rows);
+      statusEl.textContent=`Fonte ${source.label}: dados.xlsx · aba ${parsed.sheetName}`;
+      if(!quiet) showHint(source.label==='publicada'?'Dados publicados carregados':'Backend indisponível; usando dados.xlsx do site');
+      return true;
+    }catch(err){lastErr=err;console.warn('Falha ao carregar',source.url,err);}
+  }
+  if(!quiet) showHint('Não consegui carregar a fonte publicada; usando a base incorporada.');
+  console.error(lastErr);
+  render(INITIAL);
+  return false;
+}
+function arrayBufferToBase64(buffer){
+  const bytes=new Uint8Array(buffer);
+  let binary='';
+  const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk){binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));}
+  return btoa(binary);
+}
+async function publishWorkbook(file,buffer){
+  const token=authToken();
+  if(!token) throw new Error('Sessão administrativa ausente.');
+  const r=await fetch(apiUrl('/api/upload'),{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+    body:JSON.stringify({filename:file.name,contentBase64:arrayBufferToBase64(buffer)})
+  });
+  let data={};
+  try{data=await r.json();}catch{}
+  if(r.status===401){sessionStorage.removeItem('pexAdminToken');syncAuthUI();}
+  if(!r.ok) throw new Error(data.error || `Falha ao publicar (HTTP ${r.status}).`);
+  return data;
+}
+function fit(){
+  const pad=0;
+  const avail=viewport.clientWidth-pad;
+  scale=Math.min(1,avail/1920);
+  applyScale();
+}
+function applyScale(){
+  stage.style.transform=`scale(${scale})`;
+  shell.style.width=(1920*scale)+'px';shell.style.height=(808*scale)+'px';
+  document.getElementById('zoomBtn').textContent=Math.round(scale*100)+'%';
+}
+window.addEventListener('resize',()=>{if(scale<1) fit()});
+
+document.getElementById('fitBtn').onclick=fit;
+document.getElementById('zoomBtn').onclick=()=>{scale=scale===1?Math.min(.65,viewport.clientWidth/1920):1;applyScale()};
+document.getElementById('resetBtn').onclick=async()=>{if(!isAuthenticated()){openLogin(false);return;}showHint('Recarregando versão publicada…');await loadPublishedData({quiet:true});showHint('Versão publicada recarregada');};
+function setPresentation(on){
+  document.body.classList.toggle('presentation',on);
+  fit();
+}
+document.getElementById('presentBtn').onclick=()=>setPresentation(!document.body.classList.contains('presentation'));
+document.getElementById('presentationClose').onclick=()=>setPresentation(false);
+
+async function renderStageCanvas(){
+  if(typeof html2canvas==='undefined') throw new Error('html2canvas indisponível');
+  if(document.fonts?.ready) await document.fonts.ready;
+  const oldTransform=stage.style.transform;
+  const oldWidth=shell.style.width, oldHeight=shell.style.height;
+  document.body.classList.add('exporting');
+  stage.style.transform='none';
+  shell.style.width='1920px'; shell.style.height='808px';
+  try{
+    return await html2canvas(stage,{
+      backgroundColor:'#ffffff',width:1920,height:808,scale:2,useCORS:true,logging:false,
+      windowWidth:1920,windowHeight:808,scrollX:0,scrollY:0
+    });
+  }finally{
+    stage.style.transform=oldTransform;
+    shell.style.width=oldWidth; shell.style.height=oldHeight;
+    document.body.classList.remove('exporting');
+  }
+}
+function downloadCanvasPNG(canvas){
+  const a=document.createElement('a');
+  a.download='PEX-jornalismo-cronograma.png';
+  a.href=canvas.toDataURL('image/png');
+  a.click();
+}
+document.getElementById('downloadBtn').onclick=async()=>{
+  const btn=document.getElementById('downloadBtn');
+  const old=btn.innerHTML;
+  btn.disabled=true; btn.textContent='Gerando…';
+  try{
+    const canvas=await renderStageCanvas();
+    if(window.jspdf?.jsPDF){
+      const {jsPDF}=window.jspdf;
+      const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[1920,808],hotfixes:['px_scaling']});
+      const pw=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight();
+      pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,0,pw,ph,undefined,'FAST');
+      pdf.save('PEX-jornalismo-cronograma.pdf');
+      showHint('PDF gerado');
+    }else{
+      downloadCanvasPNG(canvas);
+      showHint('PDF indisponível; PNG gerado');
+    }
+  }catch(err){
+    console.error(err);
+    try{ const canvas=await renderStageCanvas(); downloadCanvasPNG(canvas); showHint('PDF indisponível; PNG gerado'); }
+    catch(e){ console.error(e); showHint('Não consegui gerar o arquivo.'); }
+  }finally{
+    btn.disabled=false; btn.innerHTML=old;
+  }
+};
+document.getElementById('xlsxInput').addEventListener('change',async(e)=>{
+  if(!isAuthenticated()){e.target.value='';openLogin(true);return;}
+  const file=e.target.files?.[0]; if(!file)return;
+  if(!/\.xlsx$/i.test(file.name)){showHint('Envie um arquivo .xlsx');e.target.value='';return;}
+  if(file.size>2*1024*1024){showHint('O Excel deve ter no máximo 2 MB');e.target.value='';return;}
+  try{
+    const buf=await file.arrayBuffer();
+    const parsed=await workbookRowsFromBuffer(buf,file.name); // valida antes de publicar
+    showHint('Publicando nova planilha…');
+    const result=await publishWorkbook(file,buf);
+    // O commit já é permanente. Recarrega pelo servidor para confirmar a fonte publicada.
+    const confirmed=await loadPublishedData({quiet:true});
+    if(!confirmed) render(parsed.rows);
+    statusEl.textContent=`Publicado: ${file.name} · ${new Date().toLocaleString('pt-BR')}${result.commitSha?` · ${result.commitSha.slice(0,7)}`:''}`;
+    showHint('Planilha publicada permanentemente');
+  }catch(err){
+    console.error(err);
+    if(/sessão/i.test(err.message||'') || /401/.test(err.message||'')) openLogin(true);
+    showHint(err.message || 'Não consegui publicar esta planilha.');
+  }
+  e.target.value='';
+});
+render(INITIAL);fit();
+loadPublishedData({quiet:true});
+setInterval(refreshCurrentWeekMarker,60*60*1000);
+</script>
+</body>
+</html>
